@@ -9,6 +9,10 @@ import {
   instagramGridStyle,
   instagramItemStyle,
   instagramImageStyle,
+  listItemStyle,
+  dateTextStyle,
+  tagContainerStyle,
+  tagStyle, // [NEW] 리스트 스타일 복구
 } from '../styles';
 
 function ListPage({ user, currentCategory }) {
@@ -17,6 +21,9 @@ function ListPage({ user, currentCategory }) {
   const [selectedTag, setSelectedTag] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [postsPerPage, setPostsPerPage] = useState(9);
+
+  // [NEW] 보기 방식 상태 (기본값: 'grid')
+  const [viewMode, setViewMode] = useState('grid');
 
   useEffect(() => {
     const q = query(collection(db, 'posts'), orderBy('createdAt', 'desc'));
@@ -47,24 +54,20 @@ function ListPage({ user, currentCategory }) {
   const currentPosts = filteredPosts.slice(indexOfFirstPost, indexOfLastPost);
   const totalPages = Math.ceil(filteredPosts.length / postsPerPage);
 
-  // [강화된 썸네일 찾기 함수]
   const getThumbnailUrl = (post) => {
-    // 1. 기존 방식: 별도로 저장된 이미지 목록(imageUrls)이 있으면 그걸 씀
     if (post.imageUrls && post.imageUrls.length > 0) return post.imageUrls[0];
-
-    // 2. 예전 데이터 호환
     if (post.imageUrl) return post.imageUrl;
-
-    // 3. [NEW] 본문 내용(HTML)을 뒤져서 첫 번째 이미지 태그의 주소(src)를 추출!
-    // 정규표현식을 사용해 <img ... src="주소" ... > 패턴을 찾습니다.
     if (post.content) {
       const imgMatch = post.content.match(/src=["']([^"']+)["']/);
-      if (imgMatch && imgMatch[1]) {
-        return imgMatch[1]; // 찾아낸 이미지 주소 반환
-      }
+      if (imgMatch && imgMatch[1]) return imgMatch[1];
     }
+    return null;
+  };
 
-    return null; // 진짜 아무것도 없으면 null (텍스트 카드 표시)
+  const formatDate = (timestamp) => {
+    if (!timestamp) return '';
+    const date = new Date(timestamp.seconds * 1000);
+    return `${date.getFullYear()}. ${String(date.getMonth() + 1).padStart(2, '0')}. ${String(date.getDate()).padStart(2, '0')}.`;
   };
 
   return (
@@ -92,23 +95,63 @@ function ListPage({ user, currentCategory }) {
           )}
         </h2>
 
-        <select
-          value={postsPerPage}
-          onChange={(e) => {
-            setPostsPerPage(Number(e.target.value));
-            setCurrentPage(1);
-          }}
-          style={{
-            padding: '5px',
-            borderRadius: '5px',
-            border: '1px solid #ddd',
-            cursor: 'pointer',
-          }}
-        >
-          <option value={9}>9개씩 보기</option>
-          <option value={18}>18개씩 보기</option>
-          <option value={27}>27개씩 보기</option>
-        </select>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          {/* [NEW] 보기 방식 전환 버튼 */}
+          <div
+            style={{
+              background: '#f8f9fa',
+              padding: '5px',
+              borderRadius: '5px',
+              display: 'flex',
+              gap: '5px',
+            }}
+          >
+            <button
+              onClick={() => setViewMode('grid')}
+              style={{
+                border: 'none',
+                background: viewMode === 'grid' ? '#333' : 'transparent',
+                color: viewMode === 'grid' ? 'white' : '#888',
+                cursor: 'pointer',
+                borderRadius: '4px',
+                padding: '5px 10px',
+              }}
+            >
+              ▦ 바둑판
+            </button>
+            <button
+              onClick={() => setViewMode('list')}
+              style={{
+                border: 'none',
+                background: viewMode === 'list' ? '#333' : 'transparent',
+                color: viewMode === 'list' ? 'white' : '#888',
+                cursor: 'pointer',
+                borderRadius: '4px',
+                padding: '5px 10px',
+              }}
+            >
+              ≡ 리스트
+            </button>
+          </div>
+
+          <select
+            value={postsPerPage}
+            onChange={(e) => {
+              setPostsPerPage(Number(e.target.value));
+              setCurrentPage(1);
+            }}
+            style={{
+              padding: '5px',
+              borderRadius: '5px',
+              border: '1px solid #ddd',
+              cursor: 'pointer',
+            }}
+          >
+            <option value={9}>9개씩</option>
+            <option value={15}>15개씩</option>
+            <option value={30}>30개씩</option>
+          </select>
+        </div>
       </div>
 
       {selectedTag && (
@@ -121,82 +164,196 @@ function ListPage({ user, currentCategory }) {
       )}
 
       {currentPosts.length > 0 ? (
-        <div style={instagramGridStyle}>
-          {currentPosts.map((post) => {
-            const thumb = getThumbnailUrl(post); // 강화된 함수 사용
-            return (
-              <Link
-                to={`/post/${post.id}`}
-                key={post.id}
-                style={{ textDecoration: 'none' }}
-              >
-                <div style={instagramItemStyle}>
-                  {thumb ? (
-                    <img
-                      src={thumb}
-                      alt="thumb"
-                      style={instagramImageStyle}
-                      onMouseOver={(e) =>
-                        (e.target.style.transform = 'scale(1.1)')
-                      }
-                      onMouseOut={(e) =>
-                        (e.target.style.transform = 'scale(1.0)')
-                      }
-                    />
-                  ) : (
-                    <div
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        backgroundColor: '#e9ecef',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        padding: '10px',
-                        boxSizing: 'border-box',
-                        color: '#495057',
-                      }}
-                    >
-                      <span style={{ fontSize: '24px', marginBottom: '10px' }}>
-                        📝
-                      </span>
-                      <span
+        <>
+          {/* A. 그리드(바둑판) 보기 모드 */}
+          {viewMode === 'grid' && (
+            <div style={instagramGridStyle}>
+              {currentPosts.map((post) => {
+                const thumb = getThumbnailUrl(post);
+                return (
+                  <Link
+                    to={`/post/${post.id}`}
+                    key={post.id}
+                    style={{ textDecoration: 'none' }}
+                  >
+                    <div style={instagramItemStyle}>
+                      {thumb ? (
+                        <img
+                          src={thumb}
+                          alt="thumb"
+                          style={instagramImageStyle}
+                          onMouseOver={(e) =>
+                            (e.target.style.transform = 'scale(1.1)')
+                          }
+                          onMouseOut={(e) =>
+                            (e.target.style.transform = 'scale(1.0)')
+                          }
+                        />
+                      ) : (
+                        <div
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            backgroundColor: '#e9ecef',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            padding: '10px',
+                            boxSizing: 'border-box',
+                            color: '#495057',
+                          }}
+                        >
+                          <span
+                            style={{ fontSize: '24px', marginBottom: '10px' }}
+                          >
+                            📝
+                          </span>
+                          <span
+                            style={{
+                              fontSize: '14px',
+                              textAlign: 'center',
+                              fontWeight: 'bold',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              display: '-webkit-box',
+                              WebkitLineClamp: 3,
+                              WebkitBoxOrient: 'vertical',
+                            }}
+                          >
+                            {post.title}
+                          </span>
+                        </div>
+                      )}
+                      <div
                         style={{
-                          fontSize: '14px',
+                          position: 'absolute',
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          background: 'rgba(0,0,0,0.6)',
+                          color: 'white',
+                          fontSize: '12px',
+                          padding: '5px',
                           textAlign: 'center',
-                          fontWeight: 'bold',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          display: '-webkit-box',
-                          WebkitLineClamp: 3,
-                          WebkitBoxOrient: 'vertical',
                         }}
                       >
                         {post.title}
-                      </span>
+                      </div>
                     </div>
-                  )}
-                  <div
-                    style={{
-                      position: 'absolute',
-                      bottom: 0,
-                      left: 0,
-                      right: 0,
-                      background: 'rgba(0,0,0,0.6)',
-                      color: 'white',
-                      fontSize: '12px',
-                      padding: '5px',
-                      textAlign: 'center',
-                    }}
-                  >
-                    {post.title}
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+
+          {/* B. 리스트 보기 모드 */}
+          {viewMode === 'list' && (
+            <div
+              style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}
+            >
+              {currentPosts.map((post) => {
+                const thumb = getThumbnailUrl(post);
+                return (
+                  <div key={post.id} style={listItemStyle}>
+                    <Link
+                      to={`/post/${post.id}`}
+                      style={{
+                        textDecoration: 'none',
+                        color: 'inherit',
+                        display: 'flex',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: '80px',
+                          height: '80px',
+                          borderRadius: '8px',
+                          overflow: 'hidden',
+                          marginRight: '20px',
+                          flexShrink: 0,
+                          backgroundColor: '#eee',
+                        }}
+                      >
+                        {thumb ? (
+                          <img
+                            src={thumb}
+                            alt="thumb"
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover',
+                            }}
+                          />
+                        ) : (
+                          <div
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '20px',
+                            }}
+                          >
+                            📝
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <span
+                          style={{
+                            fontSize: '12px',
+                            color: '#999',
+                            marginBottom: '2px',
+                            display: 'block',
+                          }}
+                        >
+                          {post.category || '기타'}
+                        </span>
+                        <h3 style={{ margin: '0 0 5px 0', color: '#333' }}>
+                          {post.title}
+                        </h3>
+                        <span style={dateTextStyle}>
+                          {formatDate(post.createdAt)}
+                        </span>
+                      </div>
+                    </Link>
+                    <div
+                      style={{
+                        marginLeft: '100px',
+                        ...tagContainerStyle,
+                        marginTop: '5px',
+                      }}
+                    >
+                      {post.tags &&
+                        post.tags.map((tag, idx) => (
+                          <span
+                            key={idx}
+                            style={{
+                              ...tagStyle,
+                              fontSize: '11px',
+                              padding: '2px 8px',
+                              backgroundColor:
+                                selectedTag === tag ? '#333' : '#f0f2f5',
+                              color: selectedTag === tag ? 'white' : '#666',
+                            }}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setSelectedTag(tag);
+                            }}
+                          >
+                            #{tag}
+                          </span>
+                        ))}
+                    </div>
                   </div>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
+                );
+              })}
+            </div>
+          )}
+        </>
       ) : (
         <div style={{ textAlign: 'center', padding: '50px', color: '#999' }}>
           작성된 글이 없습니다.

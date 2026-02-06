@@ -82,6 +82,16 @@ export const dateTextStyle = {
   fontWeight: '400',
 };
 
+// --- [복구됨] 리스트형 보기 스타일 ---
+export const listItemStyle = {
+  background: '#ffffff',
+  padding: '15px',
+  borderRadius: '12px',
+  border: '1px solid #eee',
+  boxShadow: '0 2px 5px rgba(0,0,0,0.02)',
+  marginBottom: '15px',
+};
+
 // --- 태그/탭/필터 스타일 ---
 export const tagContainerStyle = {
   display: 'flex',
@@ -155,37 +165,37 @@ export const backButtonStyle = {
   transition: '0.3s',
 };
 
-// --- [NEW] 인스타그램 스타일 그리드 ---
+// --- 인스타그램 스타일 그리드 ---
 export const instagramGridStyle = {
   display: 'grid',
-  gridTemplateColumns: 'repeat(3, 1fr)', // 가로로 3개씩 배치 (모바일에서도 3개)
-  gap: '10px', // 사진 사이 간격 (인스타처럼 좁게)
+  gridTemplateColumns: 'repeat(3, 1fr)',
+  gap: '10px',
   marginTop: '20px',
 };
 
 export const instagramItemStyle = {
   position: 'relative',
-  aspectRatio: '1 / 1', // 무조건 정사각형 비율 유지
+  aspectRatio: '1 / 1',
   overflow: 'hidden',
-  borderRadius: '4px', // 살짝 둥글게
+  borderRadius: '4px',
   cursor: 'pointer',
-  backgroundColor: '#f0f0f0', // 이미지 로딩 전 회색 배경
+  backgroundColor: '#f0f0f0',
   boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
 };
 
 export const instagramImageStyle = {
   width: '100%',
   height: '100%',
-  objectFit: 'cover', // 이미지가 찌그러지지 않고 꽉 차게
-  transition: 'transform 0.3s ease', // 마우스 올렸을 때 부드러운 효과 준비
+  objectFit: 'cover',
+  transition: 'transform 0.3s ease',
 };
 
 // --- 레이아웃 스타일 ---
 export const layoutHeaderStyle = {
   width: '100%',
   height: '300px',
-  backgroundImage:
-    'url("https://firebasestorage.googleapis.com/v0/b/bblogs-2be1a.firebasestorage.app/o/unnamed%20(5).jpg?alt=media&token=4c3de840-2bcc-4bcd-93dc-45966015d493")',
+  // [변경] backgroundImage는 이제 App.jsx에서 직접 넣으므로 여기서는 기본값만 둠
+  backgroundColor: '#333',
   backgroundSize: 'cover',
   backgroundPosition: 'center',
   color: 'white',

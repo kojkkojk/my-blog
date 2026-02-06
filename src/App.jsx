@@ -8,7 +8,7 @@ import {
   useLocation,
 } from 'react-router-dom';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { doc, getDoc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from './firebase';
 
 import ListPage from './pages/ListPage';
@@ -43,6 +43,11 @@ function App() {
   const [categories, setCategories] = useState(['전체']);
   const [currentCategory, setCurrentCategory] = useState('전체');
 
+  // [NEW] 헤더 이미지 상태
+  const [headerImage, setHeaderImage] = useState(
+    'https://images.unsplash.com/photo-1499750310159-5b5f09642062?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80',
+  );
+
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 768);
     window.addEventListener('resize', handleResize);
@@ -57,10 +62,14 @@ function App() {
     return () => unsubscribe();
   }, []);
 
+  // 설정(카테고리 + 헤더이미지) 불러오기
   useEffect(() => {
     const unsubCat = onSnapshot(doc(db, 'settings', 'config'), (doc) => {
-      if (doc.exists() && doc.data().categoryList) {
-        setCategories(['전체', ...doc.data().categoryList]);
+      if (doc.exists()) {
+        const data = doc.data();
+        if (data.categoryList) setCategories(['전체', ...data.categoryList]);
+        // [NEW] 저장된 헤더 이미지가 있으면 교체
+        if (data.headerImage) setHeaderImage(data.headerImage);
       } else {
         setCategories(['전체', '일반', '여행', '기타']);
       }
@@ -75,12 +84,12 @@ function App() {
     flexDirection: isMobile ? 'column' : 'row',
   };
 
-  // [수정됨] 여기가 에러가 났던 부분입니다. 깔끔하게 고쳤습니다.
+  // [수정] 사이드바가 오른쪽으로 가면 왼쪽 선(borderLeft)이 필요함
   const dynamicSidebarStyle = {
     ...layoutSidebarStyle,
     width: isMobile ? '100%' : '250px',
-    // 모바일이면 오른쪽 선을 없애고 아래쪽에 선을 그음
-    borderRight: isMobile ? 'none' : '1px solid #eee',
+    borderLeft: isMobile ? 'none' : '1px solid #eee', // PC에선 왼쪽 선
+    borderRight: 'none', // 오른쪽 선 제거
     borderBottom: isMobile ? '1px solid #eee' : 'none',
     padding: '20px',
     boxSizing: 'border-box',
@@ -95,7 +104,13 @@ function App() {
     <BrowserRouter>
       <ScrollToTop />
 
-      <header style={layoutHeaderStyle}>
+      {/* [NEW] 동적 헤더 이미지 적용 */}
+      <header
+        style={{
+          ...layoutHeaderStyle,
+          backgroundImage: `url("${headerImage}")`,
+        }}
+      >
         <div style={headerOverlayStyle}></div>
         <div style={headerContentStyle}>
           <Link
@@ -108,7 +123,7 @@ function App() {
               textShadow: '0 2px 4px rgba(0,0,0,0.5)',
             }}
           >
-            My Daily Blog
+            제미나이로 만든 블로그
           </Link>
           <div>
             {user ? (
@@ -146,6 +161,54 @@ function App() {
       </header>
 
       <div style={dynamicBodyStyle}>
+        {/* [중요] 본문(Main)을 먼저 씁니다. */}
+        <main style={dynamicMainStyle}>
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <ListPage user={user} currentCategory={currentCategory} />
+              }
+            />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/post/:id" element={<PostDetailPage user={user} />} />
+            <Route
+              path="/my-secret-admin-entrance-99"
+              element={<LoginPage />}
+            />
+            <Route
+              path="/upload"
+              element={
+                user ? (
+                  <PostEditorPage
+                    categories={categories.filter((c) => c !== '전체')}
+                  />
+                ) : (
+                  <LoginPage />
+                )
+              }
+            />
+            <Route
+              path="/edit/:id"
+              element={
+                user ? (
+                  <PostEditorPage
+                    isEdit={true}
+                    categories={categories.filter((c) => c !== '전체')}
+                  />
+                ) : (
+                  <LoginPage />
+                )
+              }
+            />
+            <Route
+              path="/category-manager"
+              element={user ? <CategoryManagerPage /> : <LoginPage />}
+            />
+          </Routes>
+        </main>
+
+        {/* [중요] 사이드바(Nav)를 뒤에 씁니다. -> 오른쪽 배치됨 */}
         <nav style={dynamicSidebarStyle}>
           {user && (
             <>
@@ -172,7 +235,7 @@ function App() {
                   fontSize: '14px',
                 }}
               >
-                ⚙️ 메뉴 관리
+                ⚙️ 블로그 설정
               </Link>
             </>
           )}
@@ -212,54 +275,6 @@ function App() {
             ))}
           </div>
         </nav>
-
-        <main style={dynamicMainStyle}>
-          <Routes>
-            <Route
-              path="/"
-              element={
-                <ListPage user={user} currentCategory={currentCategory} />
-              }
-            />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/post/:id" element={<PostDetailPage user={user} />} />
-            <Route
-              path="/my-secret-admin-entrance-99"
-              element={<LoginPage />}
-            />
-
-            <Route
-              path="/upload"
-              element={
-                user ? (
-                  <PostEditorPage
-                    categories={categories.filter((c) => c !== '전체')}
-                  />
-                ) : (
-                  <LoginPage />
-                )
-              }
-            />
-            <Route
-              path="/edit/:id"
-              element={
-                user ? (
-                  <PostEditorPage
-                    isEdit={true}
-                    categories={categories.filter((c) => c !== '전체')}
-                  />
-                ) : (
-                  <LoginPage />
-                )
-              }
-            />
-
-            <Route
-              path="/category-manager"
-              element={user ? <CategoryManagerPage /> : <LoginPage />}
-            />
-          </Routes>
-        </main>
       </div>
     </BrowserRouter>
   );
